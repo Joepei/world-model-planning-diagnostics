@@ -4,7 +4,17 @@
 
 Why can a planner predict a promising future yet fail when it acts? I investigate this question using the released [JEPA-WMs](https://github.com/facebookresearch/jepa-wms) models on **Wall navigation** and **Meta-World Reach-Wall**. The study compares learned and simulator-based evaluation, first over identical candidate actions and then inside independently acting planners.
 
-The main finding is a distinction between **evaluating available options** and **controlling a full episode**. On Reach-Wall, simulator-based latent evaluation selects better routes from a shared pool over world-model-based evaluation on average. That advantage does not translate into more successful episodes when the planner searches and replans independently. Subsequent audits find successful executable prefixes that the endpoint latent objective does not retain.
+## Successful actions were available, but the planner selected a different future
+
+> In **41 of 47 audited Reach-Wall replanning states**, the new search contained a candidate that reached the goal within **15 actions** and ended inside it at **action 30**. The returned plan's **simulated action-30 endpoint** was outside the goal.
+
+In Reach-Wall, the robot arm succeeds when its tool centre comes within 5 cm of the target. The simulator-based planner evaluates 30-action futures using a latent goal score, executes the first 15 actions, and then replans. These 47 states, spanning 43 episodes, were audited after confirming that finishing the previous plan's unexecuted remainder would still reach the goal. At 41 of them, the new search already contained an option that satisfied the physical task both within the execution prefix and at the full-horizon scoring endpoint.
+
+![Successful executable prefixes become rarer as the endpoint latent objective improves across CEM rounds](figures/prefix_success_by_round.png)
+
+*Across the **47-state audit cohort**, sampled-prefix success falls from **6.71% in CEM round 1 to 0.05% in round 15**, while the optimized endpoint latent cost improves. The figure tracks round-by-round search and selection across the full cohort; the **41-of-47 matched-terminal finding** compares available candidates with returned plans at the same action-30 endpoint. [Detailed audit](#5-inspecting-the-gap-between-a-plan-and-its-executed-prefix) · [Audit tables](data/reach_wall/b_prefix_candidates/).*
+
+This result connects **objective alignment, candidate search, and action execution**: physically successful options are available, while refinement improves the planner's score and retains a different set of actions. The experiments below trace that interaction through shared-pool comparisons, independently acting controllers, and native simulator replay.
 
 [Experimental protocol](docs/experiments.md) · [Reproduce the figures](docs/reproduction.md) · [Code map](docs/code-map.md) · [Published data](data/README.md) · [Research notes](notes/README.md)
 
@@ -100,14 +110,11 @@ I examined the **47 successor replanning states** after B's successful continuat
 | --- | ---: |
 | Previously unexecuted remainder still succeeds from the new state | 47/47 states |
 | New candidate pool contains a successful 15-action prefix | 44/47 pools |
+| Available candidate succeeds within 15 actions and ends inside at 30, while the returned mean ends outside | **41/47 pools** |
 | Any successful prefix among the final ten elites | 0/47 pools |
 | Returned final mean has a successful prefix | 0/47 pools |
 
-The new pools are evaluated for **any successful executable prefix**, with the previous remainder checked separately as a feasibility reference. In 41 pools, an option both succeeds within 15 actions and ends inside the goal after 30, while the returned mean ends outside it.
-
-![Native prefix success becomes rarer while the endpoint latent score improves across CEM rounds](figures/prefix_success_by_round.png)
-
-*In this outcome-conditioned set of states, sampled-prefix success decreases from **6.71% in round 1 to 0.05% in round 15**, while the optimized endpoint latent score improves. The round-by-round audit tracks how optimizing the endpoint objective changes the availability and selection of executable successful prefixes. [Audit tables](data/reach_wall/b_prefix_candidates/).*
+The new pools are evaluated for **any successful executable prefix**, with the previous remainder checked separately as a feasibility reference. The matched-terminal row checks physical goal satisfaction at the same endpoint used by the latent score. The opening figure shows how successful-prefix coverage and the optimized score evolve across CEM rounds in these audited states.
 
 A complementary comparison at the **48 matched initial states** controls state visitation: B's independently generated pool contains successful full routes in 4/48 starts versus A's 0/48. A has a closer pool-best route in 28 of the 44 starts where both pools fail. Measuring both successful-route coverage and proximity reveals how the two searches distribute their strongest candidates across starting states. [Matched-state comparison](docs/experiments.md#matched-initial-state-search).
 

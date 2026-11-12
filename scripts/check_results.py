@@ -145,6 +145,9 @@ def check_audits():
     assert len(pools) == 47
     assert len({int(r["episode"]) for r in pools}) == 43
     assert sum(int(r["successful_prefix_occurrences"]) > 0 for r in pools) == audit["pools_with_any_successful_prefix"] == 44
+    matched_terminal = sum(r["successful_prefix_with_goal_terminal_exists"] == "True"
+                           and r["returned_mean_full_endpoint_success"] == "False" for r in pools)
+    assert matched_terminal == audit["pools_with_goal_terminal_successful_prefix_but_returned_terminal_outside"] == 41
     assert sum(int(r["successful_prefix_final_elites"]) for r in pools) == 0
     assert sum(r["returned_mean_prefix_success"] == "True" for r in pools) == 0
     assert all(1 <= int(r["known_old_tail_first_hit"]) <= 15 for r in pools)
@@ -155,7 +158,8 @@ def check_audits():
     assert coverage == {"A": 0, "B": 4}
     selected = rows("data/reach_wall/prefix_vs_full/selected_plans.csv")
     assert len(selected) == 672
-    return dict(b_audited_states=47, pools_with_successful_prefix=44, initial_search_coverage=coverage)
+    return dict(b_audited_states=47, pools_with_successful_prefix=44,
+                pools_with_matched_terminal_selection_gap=matched_terminal, initial_search_coverage=coverage)
 
 
 def main():
