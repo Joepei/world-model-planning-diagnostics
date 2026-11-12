@@ -35,7 +35,7 @@ Under the original first-hit criterion (goal distance **<4.5 Wall coordinate uni
 | Minimum B cost in the captured pool | 7/10 |
 | Best available first-hit C route | 7/10 |
 
-No successful route exists in the captured pools for episodes **0, 3, and 4**. Perfect reranking of those pools cannot recover a successful option.
+No successful route exists in the captured pools for episodes **0, 3, and 4**.
 
 ### A matched-terminal control
 
