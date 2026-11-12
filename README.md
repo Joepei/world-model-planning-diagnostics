@@ -4,7 +4,7 @@
 
 Why can a planner predict a promising future yet fail when it acts? I investigate this question using the released [JEPA-WMs](https://github.com/facebookresearch/jepa-wms) models on **Wall navigation** and **Meta-World Reach-Wall**. The study compares learned and simulator-based evaluation, first over identical candidate actions and then inside independently acting planners.
 
-The main finding is a distinction between **evaluating available options** and **controlling a full episode**. On Reach-Wall, simulator-based latent evaluation selects better routes from a shared pool on average. That advantage does not translate into more successful episodes when the planner searches and replans independently. Subsequent audits find successful executable prefixes that the endpoint latent objective does not retain.
+The main finding is a distinction between **evaluating available options** and **controlling a full episode**. On Reach-Wall, simulator-based latent evaluation selects better routes from a shared pool over world-model-based evaluation on average. That advantage does not translate into more successful episodes when the planner searches and replans independently. Subsequent audits find successful executable prefixes that the endpoint latent objective does not retain.
 
 [Experimental protocol](docs/experiments.md) · [Reproduce the figures](docs/reproduction.md) · [Code map](docs/code-map.md) · [Published data](data/README.md) · [Research notes](notes/README.md)
 
