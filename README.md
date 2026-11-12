@@ -8,7 +8,7 @@ Why can a planner predict a promising future yet fail when it acts? I investigat
 
 > In **41 of 47 audited Reach-Wall replanning states**, the new search contained a candidate that reached the goal within **15 actions** and ended inside it at **action 30**. The returned plan's **simulated action-30 endpoint** was outside the goal.
 
-In Reach-Wall, the robot arm succeeds when its tool centre comes within 5 cm of the target. The simulator-based planner evaluates 30-action futures using a latent goal score, executes the first 15 actions, and then replans. These 47 states, spanning 43 episodes, were audited after confirming that finishing the previous plan's unexecuted remainder would still reach the goal. At 41 of them, the new search already contained an option that satisfied the physical task both within the execution prefix and at the full-horizon scoring endpoint.
+In Reach-Wall, the robot arm succeeds when its tool centre comes within 5 cm of the target. The simulator-based planner evaluates 30-action futures using a latent goal score, executes the first 15 actions, and then replans. These 47 states, spanning 43 episodes, were audited after confirming that finishing the previous plan's unexecuted remainder would still reach the goal.
 
 ![Successful executable prefixes become rarer as the endpoint latent objective improves across CEM rounds](figures/prefix_success_by_round.png)
 
