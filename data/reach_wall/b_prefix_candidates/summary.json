@@ -1,0 +1,32 @@
+{
+  "completed_pools": 47,
+  "expected_pools": 47,
+  "complete": true,
+  "episodes": 43,
+  "sample_occurrences": 211500,
+  "successful_prefix_samples": 3303,
+  "sample_success_pct": 1.5617021276595744,
+  "candidate_occurrences": 212205,
+  "successful_prefix_occurrences": 3304,
+  "successful_updated_means": 1,
+  "unique_state_and_prefix_pairs": 211547,
+  "successful_unique_state_and_prefix_pairs": 3303,
+  "pools_with_any_successful_prefix": 44,
+  "pools_with_a_successful_final_elite": 0,
+  "pools_where_all_final_elites_succeed": 0,
+  "pools_where_lowest_cost_sample_succeeds": 0,
+  "pools_with_successful_sample_cheaper_than_returned_mean": 1,
+  "successful_prefix_samples_ever_elite": 42,
+  "successful_prefixes_outside_goal_at_full_endpoint": 1454,
+  "successful_prefixes_inside_goal_at_full_endpoint": 1850,
+  "pools_with_successful_prefix_and_goal_terminal": 44,
+  "pools_with_goal_terminal_successful_prefix_but_returned_terminal_outside": 41,
+  "known_old_tail_exact_prefix_occurrences": 0,
+  "returned_mean_prefix_successes": 0,
+  "known_old_tail_successes": 47,
+  "native_reference_max_error_m": 0.0,
+  "selection_patterns": {
+    "no_successful_prefix_in_captured_pool": 3,
+    "successful_prefix_in_pool_but_none_in_final_elites": 44
+  }
+}

@@ -1,0 +1,134 @@
+{
+  "completed_episodes": 48,
+  "expected_episodes": 48,
+  "complete": true,
+  "methods": {
+    "A": {
+      "episodes": 48,
+      "sample_occurrences": 216000,
+      "unique_state_route_pairs": 216048,
+      "full_endpoint_successful_samples": 0,
+      "median_terminal_best_distance_cm": 7.95134750478707,
+      "full": {
+        "successful_samples": 0,
+        "sample_success_pct": 0.0,
+        "pool_covered_episodes": 0,
+        "returned_mean_successes": 0,
+        "returned_mean_missed_successes": 0,
+        "minimum_own_cost_sample_successes": 0,
+        "mean_sample_stopped_distance_cm": 14.550225271179896,
+        "median_best_stopped_distance_cm": 7.95134750478707,
+        "mean_returned_mean_stopped_distance_cm": 10.280849197755154,
+        "post_round1_sample_success_pct": 0.0
+      },
+      "prefix": {
+        "successful_samples": 0,
+        "sample_success_pct": 0.0,
+        "pool_covered_episodes": 0,
+        "returned_mean_successes": 0,
+        "returned_mean_missed_successes": 0,
+        "minimum_own_cost_sample_successes": 0,
+        "mean_sample_stopped_distance_cm": 21.013496040453536,
+        "median_best_stopped_distance_cm": 18.154460931433015,
+        "mean_returned_mean_stopped_distance_cm": 18.88125898397189,
+        "post_round1_sample_success_pct": 0.0
+      }
+    },
+    "B": {
+      "episodes": 48,
+      "sample_occurrences": 216000,
+      "unique_state_route_pairs": 216048,
+      "full_endpoint_successful_samples": 792,
+      "median_terminal_best_distance_cm": 9.008180631192932,
+      "full": {
+        "successful_samples": 792,
+        "sample_success_pct": 0.36666666666666664,
+        "pool_covered_episodes": 4,
+        "returned_mean_successes": 2,
+        "returned_mean_missed_successes": 2,
+        "minimum_own_cost_sample_successes": 2,
+        "mean_sample_stopped_distance_cm": 15.16840777091879,
+        "median_best_stopped_distance_cm": 9.008180631192932,
+        "mean_returned_mean_stopped_distance_cm": 10.262400470553644,
+        "post_round1_sample_success_pct": 0.39285714285714285
+      },
+      "prefix": {
+        "successful_samples": 0,
+        "sample_success_pct": 0.0,
+        "pool_covered_episodes": 0,
+        "returned_mean_successes": 0,
+        "returned_mean_missed_successes": 0,
+        "minimum_own_cost_sample_successes": 0,
+        "mean_sample_stopped_distance_cm": 21.24176883669786,
+        "median_best_stopped_distance_cm": 18.31388154671156,
+        "mean_returned_mean_stopped_distance_cm": 18.821288525511203,
+        "post_round1_sample_success_pct": 0.0
+      }
+    }
+  },
+  "paired": {
+    "full": {
+      "pool_best_wins": {
+        "A": 28,
+        "B": 20,
+        "tie": 0
+      },
+      "returned_mean_wins": {
+        "A": 22,
+        "B": 26,
+        "tie": 0
+      },
+      "sample_success_pct_difference_B_minus_A": {
+        "mean": 0.3666666666666667,
+        "median": 0.0,
+        "paired_episode_bootstrap_95_percentile_ci": [
+          0.000925925925925926,
+          1.027777777777778
+        ]
+      },
+      "mean_sample_distance_difference_B_minus_A_cm": {
+        "mean": 0.6181824997388934,
+        "median": 0.5085894012217809,
+        "paired_episode_bootstrap_95_percentile_ci": [
+          0.2090187064413912,
+          1.0346032551179822
+        ]
+      }
+    },
+    "prefix": {
+      "pool_best_wins": {
+        "A": 27,
+        "B": 21,
+        "tie": 0
+      },
+      "returned_mean_wins": {
+        "A": 24,
+        "B": 24,
+        "tie": 0
+      },
+      "sample_success_pct_difference_B_minus_A": {
+        "mean": 0.0,
+        "median": 0.0,
+        "paired_episode_bootstrap_95_percentile_ci": [
+          0.0,
+          0.0
+        ]
+      },
+      "mean_sample_distance_difference_B_minus_A_cm": {
+        "mean": 0.22827279624432717,
+        "median": 0.21512868028387366,
+        "paired_episode_bootstrap_95_percentile_ci": [
+          0.09989378155706527,
+          0.36093098179311855
+        ]
+      }
+    }
+  },
+  "pairing_controls": {
+    "paired_initial_physics": true,
+    "paired_goal_encoding": true,
+    "matched_first_population_per_episode": 300,
+    "shared_native_routes_checked": 14400,
+    "max_native_error_m": 0.0
+  }
+}

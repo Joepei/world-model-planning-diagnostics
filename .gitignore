@@ -1,0 +1,21 @@
+# Local execution artifacts; published study data lives in data/.
+/runs/
+/checkpoints/
+/.venv/
+/.conda/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+*.sqlite3*
+*.pt
+*.pth
+*.pth.tar
+*.log
+.env
+.env.*
+!*.example
+.DS_Store
+Thumbs.db
+/site/
+/figures/reproduced/

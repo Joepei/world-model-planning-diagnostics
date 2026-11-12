@@ -1,0 +1,5 @@
+# Data-only validation, figures and analysis tests. Python 3.11 was used.
+numpy==2.0.1
+scipy==1.17.1
+matplotlib==3.11.2
+PyYAML==6.0.3

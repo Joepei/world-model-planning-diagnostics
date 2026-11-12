@@ -1,0 +1,38 @@
+{
+  "complete": true,
+  "paired_episodes": 48,
+  "pool_summaries": 96,
+  "scope_pairs": 96,
+  "selection_rows": 768,
+  "per_episode_round_rows": 1440,
+  "a_native_choices_checked_against_prior_c_analysis": 288,
+  "returned_mean_scopes_checked_against_prior_extraction": 192,
+  "identical_first_population_native_sample_statistics_verified": 48,
+  "aggregate_counts_distances_recomputed": true,
+  "paired_bootstrap_recomputed": true,
+  "conditional_regret_components_nonnegative": true,
+  "plot_visually_checked": true,
+  "all_native_validation": {
+    "complete": true,
+    "episodes": 48,
+    "unique_b_routes_checked": 216048,
+    "native_trace_points_checked": 6481440,
+    "unique_b_full_successes": 794,
+    "unique_b_prefix_successes": 0,
+    "unique_b_terminal_successes": 794,
+    "paired_first_population_sequences": 14400,
+    "shared_native_routes_checked": 14400,
+    "paired_initial_snapshots_and_goal_encodings": true,
+    "max_shared_native_distance_error_m": 0,
+    "max_selected_trace_error_m": 0,
+    "b_pools_with_success": [
+      5,
+      11,
+      15,
+      20
+    ],
+    "cached_first_hit_prefix_and_endpoint_fields_independently_checked": true
+  },
+  "replay_reach_wall_initial_search.py_sha256": "3674ac4af4781a4cd875ab398191b0d28872c206dc933ca6b435ec6482a167f1",
+  "analyze_reach_wall_initial_search.py_sha256": "79a8e8d49f8a20d97be30e86abda404409653bae5c3bd4ba14acdc92175ea718"
+}

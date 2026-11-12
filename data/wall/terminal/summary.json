@@ -1,0 +1,154 @@
+{
+  "episodes": 10,
+  "occurrences": 6500,
+  "unique_routes": 6410,
+  "pools_with_terminal_success": 7,
+  "pools_with_first_hit_success": 7,
+  "first_hit_success_routes": 627,
+  "terminal_success_routes": 357,
+  "first_hit_success_terminal_failure_routes": 270,
+  "correlations": {
+    "spearman_b_terminal": {
+      "n": 10,
+      "mean": 0.6236055562456916,
+      "median": 0.7966465264919009,
+      "minimum": -0.06468044235788124,
+      "maximum": 0.9677618845408025
+    },
+    "spearman_b_first_hit": {
+      "n": 10,
+      "mean": 0.6226939246141256,
+      "median": 0.7582954615634363,
+      "minimum": 0.031562012480499224,
+      "maximum": 0.8739645255291436
+    },
+    "spearman_terminal_first_hit": {
+      "n": 10,
+      "mean": 0.8769318362211397,
+      "median": 0.8895007820515654,
+      "minimum": 0.5721024483502706,
+      "maximum": 0.9938537915348391
+    },
+    "spearman_a_terminal": {
+      "n": 10,
+      "mean": 0.654920825921822,
+      "median": 0.8202890352763644,
+      "minimum": -0.026382140565996477,
+      "maximum": 0.9041265108548269
+    },
+    "spearman_b_terminal_minus_b_first_hit": {
+      "n": 10,
+      "mean": 0.0009116316315660407,
+      "median": 0.020266131953076028,
+      "minimum": -0.3564091956201613,
+      "maximum": 0.14817472804355625
+    }
+  },
+  "selections": {
+    "deployed": {
+      "episodes": 10,
+      "terminal_successes": 5,
+      "first_hit_successes": 5,
+      "terminal_optimal": 0,
+      "terminal_missed_successes": 2,
+      "terminal_distance": {
+        "n": 10,
+        "mean": 12.229661345481873,
+        "median": 4.261168003082275,
+        "minimum": 0.8188143968582153,
+        "maximum": 59.55904006958008
+      },
+      "terminal_distance_regret": {
+        "n": 10,
+        "mean": 5.033412071317434,
+        "median": 2.8477249145507812,
+        "minimum": 0.6467674821615219,
+        "maximum": 25.642963409423828
+      }
+    },
+    "min_a": {
+      "episodes": 10,
+      "terminal_successes": 3,
+      "first_hit_successes": 5,
+      "terminal_optimal": 1,
+      "terminal_missed_successes": 4,
+      "terminal_distance": {
+        "n": 10,
+        "mean": 13.0543622687459,
+        "median": 7.3888397216796875,
+        "minimum": 0.17204691469669342,
+        "maximum": 54.60873031616211
+      },
+      "terminal_distance_regret": {
+        "n": 10,
+        "mean": 5.858112994581461,
+        "median": 4.215007901191711,
+        "minimum": 0.0,
+        "maximum": 20.69265365600586
+      }
+    },
+    "min_b": {
+      "episodes": 10,
+      "terminal_successes": 7,
+      "first_hit_successes": 7,
+      "terminal_optimal": 5,
+      "terminal_missed_successes": 0,
+      "terminal_distance": {
+        "n": 10,
+        "mean": 10.592307316511869,
+        "median": 1.497443825006485,
+        "minimum": 0.11467918008565903,
+        "maximum": 59.638336181640625
+      },
+      "terminal_distance_regret": {
+        "n": 10,
+        "mean": 3.3960580423474314,
+        "median": 0.005263127386569977,
+        "minimum": 0.0,
+        "maximum": 25.722259521484375
+      }
+    },
+    "min_terminal": {
+      "episodes": 10,
+      "terminal_successes": 7,
+      "first_hit_successes": 7,
+      "terminal_optimal": 10,
+      "terminal_missed_successes": 0,
+      "terminal_distance": {
+        "n": 10,
+        "mean": 7.196249274164439,
+        "median": 1.497443825006485,
+        "minimum": 0.11467918008565903,
+        "maximum": 33.91607666015625
+      },
+      "terminal_distance_regret": {
+        "n": 10,
+        "mean": 0.0,
+        "median": 0.0,
+        "minimum": 0.0,
+        "maximum": 0.0
+      }
+    },
+    "min_first_hit": {
+      "episodes": 10,
+      "terminal_successes": 1,
+      "first_hit_successes": 7,
+      "terminal_optimal": 3,
+      "terminal_missed_successes": 6,
+      "terminal_distance": {
+        "n": 10,
+        "mean": 12.93508985042572,
+        "median": 10.248084545135498,
+        "minimum": 3.2671592235565186,
+        "maximum": 33.91607666015625
+      },
+      "terminal_distance_regret": {
+        "n": 10,
+        "mean": 5.738840576261282,
+        "median": 5.530956864356995,
+        "minimum": 0.0,
+        "maximum": 14.960544049739838
+      }
+    }
+  }
+}

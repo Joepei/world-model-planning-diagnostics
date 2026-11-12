@@ -1,0 +1,20 @@
+{
+  "A": {
+    "episodes": 48,
+    "successes": 6,
+    "executed_actions": 4799,
+    "mean_final_distance_cm": 6.810709965667506
+  },
+  "B": {
+    "episodes": 48,
+    "successes": 0,
+    "executed_actions": 4800,
+    "mean_final_distance_cm": 6.20373592753353
+  },
+  "C": {
+    "episodes": 48,
+    "successes": 48,
+    "executed_actions": 1510,
+    "mean_final_distance_cm": 4.819463448350736
+  }
+}

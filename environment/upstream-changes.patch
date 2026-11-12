@@ -1,0 +1,768 @@
+diff --git a/configs/evals/simu_env_planning/wall/jepa-wm/wall_L2_cem_sourcerandstate_H6_nas6_ctxt2_r224_alpha0.1_ep96_decode.yaml b/configs/evals/simu_env_planning/wall/jepa-wm/wall_L2_cem_sourcerandstate_H6_nas6_ctxt2_r224_alpha0.1_ep96_decode.yaml
+index 1af35f0..1ca111d 100644
+--- a/configs/evals/simu_env_planning/wall/jepa-wm/wall_L2_cem_sourcerandstate_H6_nas6_ctxt2_r224_alpha0.1_ep96_decode.yaml
++++ b/configs/evals/simu_env_planning/wall/jepa-wm/wall_L2_cem_sourcerandstate_H6_nas6_ctxt2_r224_alpha0.1_ep96_decode.yaml
+@@ -3,11 +3,11 @@ tasks_per_node: 8
+ cpus_per_task: 16
+ mem_per_gpu: 210G
+ copy_code: false
+-folder: ${JEPAWM_LOGS}/wall_sweep/wall_4f_fsk5_ask1_r224_vjtranoaug_predAdaLN_ftprop_depth6_repro_2roll_save_2n
+-tag: online_gc_zeroshot/wall_L2_cem_sourcerandstate_H6_nas6_ctxt2_r224_alpha0.1_ep96_decode/epoch-50-plan-only
++folder: ${JEPAWM_LOGS}/wall
++tag: smoke
+ eval_name: simu_env_planning
+ meta:
+-  quick_debug: false
++  quick_debug: True
+   seed: 1
+   eval_episodes: 96
+ distributed:
+@@ -18,10 +18,10 @@ logging:
+   exp_name: gc_zeroshot_dist
+   save_csv: true
+   tqdm_silent: false
+-  optional_plots: true
++  optional_plots: false
+ model_kwargs:
+   module_name: app.vjepa_wm.modelcustom.simu_env_planning.vit_enc_preds
+-  checkpoint: jepa-latest.pth.tar
++  checkpoint: https://dl.fbaipublicfiles.com/jepa-wms/wall_jepa-wm.pth.tar
+   pretrain_kwargs:
+     grid_size: 16
+     tubelet_size_enc: 1
+@@ -110,8 +110,6 @@ model_kwargs:
+             use_activation_checkpointing: false
+             proprio_dim: 4
+       pretrain_dec_path:
+-        state_head: ${JEPAWM_LOGS}/wall/step2_wall_state_head_dinovits_r224/jepa-latest.pth.tar
+-        image_head: https://dl.fbaipublicfiles.com/jepa-wms/vm2m_lpips_dv2vits_vitldec_224_INet.pth.tar
+   data:
+     dataset_type: custom
+     datasets:
+@@ -201,7 +199,7 @@ planner:
+   var_scale: 1.0
+   num_act_stepped: 6
+   repeat_actskip: false
+-  decode_each_iteration: true
++  decode_each_iteration: false
+   distribute_planner: false
+   planning_objective:
+     objective_type: L2
+diff --git a/evals/main.py b/evals/main.py
+index 78d4055..1dc38de 100644
+--- a/evals/main.py
++++ b/evals/main.py
+@@ -50,6 +50,7 @@ parser.add_argument("--checkpoint", type=str, help="location of pretrained ckpt"
+ parser.add_argument("--model_name", type=str, help="Model name")
+ parser.add_argument("--batch_size", type=int)
+ parser.add_argument("--use_fsdp", action="store_true")
++parser.add_argument("--resume", action="store_true", help="Reuse completed Reach-Wall episodes and restart the first unfinished trial.")
+ 
+ 
+ def process_main(args, rank, fname, world_size, devices):
+@@ -80,6 +81,8 @@ def process_main(args, rank, fname, world_size, devices):
+         if args.folder:
+             params["folder"] = args.folder
+         params["use_fsdp"] = args.use_fsdp
++        if args.resume:
++            params.setdefault("meta", {})["resume_completed"] = True
+         logger.info("loaded params...")
+ 
+     if rank == 0:
+diff --git a/evals/simu_env_planning/envs/init.py b/evals/simu_env_planning/envs/init.py
+index 5bb9087..0d62b07 100644
+--- a/evals/simu_env_planning/envs/init.py
++++ b/evals/simu_env_planning/envs/init.py
+@@ -116,6 +116,8 @@ def make_env(cfg):
+         cfg.obs_shape = {"state": [4], "rgb": cfg.obs_shape["rgb_state"]}
+ 
+     cfg.action_dim = env.action_space.shape[0]
++    cfg.env_action_low = env.action_space.low.tolist()
++    cfg.env_action_high = env.action_space.high.tolist()
+     cfg.episode_length = env.max_episode_steps
+     cfg.meta.seed_steps = max(1000, 5 * cfg.episode_length)
+     return env
+diff --git a/evals/simu_env_planning/envs/metaworld.py b/evals/simu_env_planning/envs/metaworld.py
+index 63c7061..e78dbc5 100644
+--- a/evals/simu_env_planning/envs/metaworld.py
++++ b/evals/simu_env_planning/envs/metaworld.py
+@@ -3,6 +3,8 @@
+ # The below code is inspired from TD-MPC2 https://github.com/nicklashansen/tdmpc2
+ # licensed under the MIT License
+ 
++import copy
++import importlib.metadata
+ import logging
+ 
+ import gym
+@@ -77,6 +79,7 @@ class MetaWorldWrapper(gym.Wrapper):
+     def reset(self, **kwargs):
+         obs, info = super().reset(**kwargs)
+         obs = obs.astype(np.float32)
++        self._last_state = obs.copy()
+         info["proprio"] = obs[:4]
+         info["state"] = obs
+         return obs, info
+@@ -98,14 +101,67 @@ class MetaWorldWrapper(gym.Wrapper):
+         return self.reset()
+ 
+     def step(self, action):
+-        reward = 0
+-        obs, r, trunc, done, info = self.env.step(action.copy())
+-        # TODO: check if this implem is correct compared to TDMPC2 codebase
+-        reward += r
++        action = np.asarray(action, dtype=np.float32)
++        if self.cfg.planner.get("enforce_action_bounds", False):
++            low, high = self.action_space.low, self.action_space.high
++            if not np.isfinite(action).all() or np.any(action < low - 1e-6) or np.any(action > high + 1e-6):
++                raise ValueError("Simulator received an action outside the benchmark bounds")
++            # Remove only floating-point roundoff from normalize/denormalize.
++            action = np.clip(action, low, high)
++        obs, reward, terminated, truncated, info = self.env.step(action.copy())
++        if self.cfg.task_specification.done_at_succ and info["success"]:
++            terminated = True  # Checked after every raw action, not just a plan batch.
+         obs = obs.astype(np.float32)
++        self._last_state = obs.copy()
+         info["proprio"] = obs[:4]
+         info["state"] = obs
+-        return obs, reward, trunc, done, info
++        return obs, reward, terminated, truncated, info
++
++    def get_replay_state(self):
++        """Save integration inputs and Python history, not just a 39D observation."""
++        import mujoco
++
++        if self.cfg.task_specification.task != "mw-reach-wall":
++            raise ValueError("Replay state capture is currently validated for reach-wall only")
++        spec = mujoco.mjtState.mjSTATE_INTEGRATION
++        state = np.empty(mujoco.mj_stateSize(self.env.model, spec), dtype=np.float64)
++        mujoco.mj_getState(self.env.model, self.env.data, state, spec)
++        history_names = (
++            "_target_pos", "_prev_obs", "_last_stable_obs", "_last_rand_vec",
++            "_freeze_rand_vec", "seeded_rand_vec", "curr_path_length", "_did_see_sim_exception",
++            "obj_init_pos", "obj_init_angle", "init_tcp", "init_left_pad", "init_right_pad",
++            "maxReachDist", "maxPushDist", "maxPlacingDist", "liftThresh", "objHeight", "heightTarget",
++        )
++        return {
++            "schema_version": 1,
++            "metaworld_version": importlib.metadata.version("metaworld"),
++            "mujoco_version": mujoco.__version__,
++            "state_spec": int(spec), "integration_state": state,
++            "history": {name: copy.deepcopy(getattr(self.env, name)) for name in history_names if hasattr(self.env, name)},
++            "model_arrays": {name: getattr(self.env.model, name).copy() for name in ("body_pos", "body_quat", "site_pos", "site_quat")},
++            "np_random_state": copy.deepcopy(self.env.np_random.bit_generator.state),
++            "last_state": self._last_state.copy(),
++        }
++
++    def set_replay_state(self, snapshot):
++        """Restore a state captured on the same benchmark/library versions."""
++        import mujoco
++
++        if snapshot["metaworld_version"] != importlib.metadata.version("metaworld") or snapshot["mujoco_version"] != mujoco.__version__:
++            raise ValueError("Replay requires the captured Meta-World and MuJoCo versions")
++        for name, value in snapshot["model_arrays"].items():
++            getattr(self.env.model, name)[:] = value
++        for name, value in snapshot["history"].items():
++            setattr(self.env, name, copy.deepcopy(value))
++        self.env.np_random.bit_generator.state = copy.deepcopy(snapshot["np_random_state"])
++        self._last_state = snapshot["last_state"].copy()
++        spec = snapshot["state_spec"]
++        mujoco.mj_setState(self.env.model, self.env.data, snapshot["integration_state"], spec)
++        mujoco.mj_forward(self.env.model, self.env.data)
++        # Forward computes derived geometry but may update solver warmstart.
++        # Restore all integration inputs once more before the next real step.
++        mujoco.mj_setState(self.env.model, self.env.data, snapshot["integration_state"], spec)
++        return self._last_state.copy()
+ 
+     def update_env(self, env_info):
+         pass
+diff --git a/evals/simu_env_planning/eval.py b/evals/simu_env_planning/eval.py
+index 852c791..c5b8005 100644
+--- a/evals/simu_env_planning/eval.py
++++ b/evals/simu_env_planning/eval.py
+@@ -17,6 +17,12 @@ import yaml
+ from omegaconf import OmegaConf
+ 
+ from evals.simu_env_planning.envs.init import make_env
++from evals.simu_env_planning.episode_resume import (
++    archive_incomplete_episode, check_resume_config, config_digest,
++    load_episode_checkpoint, recover_legacy_episode, restore_episode_checkpoint,
++    save_episode_checkpoint, record_execution_session,
++)
++from evals.simu_env_planning.resource_monitor import ResourceMonitor
+ from evals.simu_env_planning.planning.common.gc_logger import Logger
+ from evals.simu_env_planning.planning.common.parser import parse_cfg
+ from evals.simu_env_planning.planning.gc_agent import GC_Agent
+@@ -72,9 +78,27 @@ def main(args_eval, resume_preempt=False):
+ 
+     # -- Save args_eval.yaml
+     yaml_file_path = os.path.join(folder, "args_eval.yaml")
+-    with open(yaml_file_path, "w") as yaml_file:
+-        yaml.dump(args_eval, yaml_file, default_flow_style=False)
++    resume = args_eval.get("meta", {}).get("resume_completed", False)
++    if resume:
++        if args_eval["task_specification"]["task"] != "mw-reach-wall":
++            raise ValueError("--resume currently supports the Reach-Wall evaluation only")
++        with open(yaml_file_path) as yaml_file:
++            check_resume_config(args_eval, yaml.safe_load(yaml_file))
++    else:
++        with open(yaml_file_path, "w") as yaml_file:
++            yaml.dump(args_eval, yaml_file, default_flow_style=False)
++    args_eval["resume_config_digest"] = config_digest(args_eval)
+     log.info(f"📁 Saved args_eval to {yaml_file_path}")
++    record_execution_session(folder, args_eval)
++    with ResourceMonitor(folder, args_eval.get("logging", {}).get("resource_monitor_interval_s")) as monitor:
++        _run_evaluation(args_eval, monitor)
++
++
++def _run_evaluation(args_eval, resource_monitor):
++    module_name = args_eval["model_kwargs"]["module_name"]
++    checkpoint_folder = args_eval.get("checkpoint_folder", args_eval.get("folder"))
++    folder = os.path.join(args_eval["folder"], "simu_env_planning", args_eval.get("tag") or "")
++    resource_monitor.set_context("load_model")
+ 
+     # -- Distributed
+     try:
+@@ -98,6 +122,8 @@ def main(args_eval, resume_preempt=False):
+     cfgs_data_aug = model_kwargs.get("data_aug", {})
+     wrapper_kwargs = model_kwargs.get("wrapper_kwargs", {})
+     pretrain_kwargs = model_kwargs.get("pretrain_kwargs", {})
++    if cfgs_data.get("normalization_stats") and args_eval["task_specification"]["goal_source"] in ("dset", "random_action"):
++        raise ValueError("Dataset-based goal sources require a trajectory dataset, not normalization_stats only")
+     dset, preprocessor = make_datasets(cfgs_data, cfgs_data_aug, world_size, rank)
+     args_eval["frameskip"] = cfgs_data["custom"]["frameskip"]
+     args_eval["work_dir"] = folder
+@@ -117,10 +143,12 @@ def main(args_eval, resume_preempt=False):
+     log.info("✅ Loaded encoder and predictor")
+ 
+     # -- Launch eval
+-    main_distributed_episodes_eval(args_eval, model=model, dset=dset, preprocessor=preprocessor, rank=rank)
++    main_distributed_episodes_eval(args_eval, model=model, dset=dset, preprocessor=preprocessor, rank=rank,
++                                   resource_monitor=resource_monitor)
+ 
+ 
+-def main_distributed_episodes_eval(cfg: dict, model=None, dset=None, preprocessor=None, rank=0, device="cuda:0"):
++def main_distributed_episodes_eval(cfg: dict, model=None, dset=None, preprocessor=None, rank=0, device="cuda:0",
++                                   resource_monitor=None):
+     """
+     Should work with one or more GPUs, even with distribute_multitask_eval=False.
+     If world_size > 1 and distribute_multitask_eval=False, will all have same task_indices
+@@ -136,6 +164,8 @@ def main_distributed_episodes_eval(cfg: dict, model=None, dset=None, preprocesso
+     set_seed(cfg.meta.seed)
+     cfg.rank = rank
+     cfg.world_size = dist.get_world_size()
++    if cfg.meta.get("resume_completed", False) and cfg.world_size != 1:
++        raise ValueError("--resume requires single-process execution (--debug)")
+     cfg.device = device
+     cfg.num_active_gpus = cfg.world_size
+     cfg.active_ranks = [i for i in range(cfg.world_size)]
+@@ -152,6 +182,7 @@ def main_distributed_episodes_eval(cfg: dict, model=None, dset=None, preprocesso
+         cfg.action_ratio = cfg.frameskip // model.action_skip
+     log.info("First env creation just to define cfg.action_dim")
+     env = make_env(cfg)  # needed here to define cfg.action_dim
++    env.close()
+ 
+     # We assume we have more episodes than GPUs
+     cfg.planner.distribute_planner = False
+@@ -196,6 +227,7 @@ def main_distributed_episodes_eval(cfg: dict, model=None, dset=None, preprocesso
+     # The multitask wrapper allows to iterate over the task-specific envs
+     env = make_env(cfg)
+     evaluator = PlanEvaluator(cfg, agent)
++    evaluator.resource_monitor = resource_monitor
+     results = dict()
+     processed_episodes = set()
+     for task_pos, (task_idx, episodes) in enumerate(zip(cfg.task_indices, cfg.episodes_per_task)):
+@@ -232,6 +264,30 @@ def main_distributed_episodes_eval(cfg: dict, model=None, dset=None, preprocesso
+                 f"🎯 Evaluating task {cfg.tasks[task_idx]}, episode ({i + 1}/{len(cfg.episodes_per_task[task_pos])})"
+             )
+             episode_start_time = time()
++            if resource_monitor is not None:
++                resource_monitor.set_context("episode", episode=ep)
++            episode_dir = cfg.work_dir / cfg.tasks[task_idx] / f"ep_{ep}"
++            cached = None
++            if cfg.meta.get("resume_completed", False):
++                cached = load_episode_checkpoint(episode_dir, cfg.resume_config_digest)
++                if cached is None:
++                    cached = recover_legacy_episode(
++                        episode_dir, cfg, agent, env, evaluator, task_idx, cfg.resume_config_digest,
++                    )
++                if cached is not None:
++                    restore_episode_checkpoint(cached, agent, env)
++                    log.info("Resume: skipping completed %s, episode %s", cfg.tasks[task_idx], ep)
++                else:
++                    archive_incomplete_episode(episode_dir)
++            if cached is None:
++                episode_values = evaluator.eval(cfg, agent, env, task_idx=task_idx, ep=ep)
++                episode_elapsed = time() - episode_start_time
++                if cfg.task_specification.task == "mw-reach-wall":
++                    save_episode_checkpoint(
++                        episode_dir, cfg.resume_config_digest, agent, env, episode_values, episode_elapsed,
++                    )
++            else:
++                episode_values, episode_elapsed = cached["values"], cached["elapsed"]
+             (
+                 expert_success,
+                 success,
+@@ -244,9 +300,8 @@ def main_distributed_episodes_eval(cfg: dict, model=None, dset=None, preprocesso
+                 state_dist,
+                 total_lpips,
+                 total_emb_l2,
+-            ) = evaluator.eval(cfg, agent, env, task_idx=task_idx, ep=ep)
++            ) = episode_values
+             dist.barrier()  # should not provoke any error
+-            episode_end_time = time()
+             # Check for duplicate task and episode index
+             if (task_idx, ep) in processed_episodes:
+                 continue  # Skip duplicate dummy episodes logging
+@@ -259,7 +314,7 @@ def main_distributed_episodes_eval(cfg: dict, model=None, dset=None, preprocesso
+             ep_end_distances_xyz.append(end_distance_xyz)
+             ep_end_distances_orientation.append(end_distance_orientation)
+             ep_end_distances_closure.append(end_distance_closure)
+-            ep_times.append(episode_end_time - episode_start_time)
++            ep_times.append(episode_elapsed)
+             ep_state_distances.append(state_dist)
+             ep_total_lpips.append(total_lpips)
+             ep_total_emb_l2.append(total_emb_l2)
+@@ -280,7 +335,7 @@ def main_distributed_episodes_eval(cfg: dict, model=None, dset=None, preprocesso
+                     np.nansum(ep_end_distances_closure),
+                     len(ep_end_distances_closure),
+                 ),
+-                f"ep_time+{cfg.tasks[task_idx]}": (np.nansum(ep_times), len(ep_times)),
++                f"ep_time+{cfg.tasks[task_idx]}": (np.sum(ep_times), len(ep_times)),
+                 f"ep_state_dist+{cfg.tasks[task_idx]}": (np.nansum(ep_state_distances), len(ep_state_distances)),
+                 f"ep_total_lpips+{cfg.tasks[task_idx]}": (np.nansum(ep_total_lpips), len(ep_total_lpips)),
+                 f"ep_total_emb_l2+{cfg.tasks[task_idx]}": (np.nansum(ep_total_emb_l2), len(ep_total_emb_l2)),
+diff --git a/evals/simu_env_planning/planning/gc_agent.py b/evals/simu_env_planning/planning/gc_agent.py
+index 0a66a0d..164d92a 100644
+--- a/evals/simu_env_planning/planning/gc_agent.py
++++ b/evals/simu_env_planning/planning/gc_agent.py
+@@ -56,12 +56,26 @@ class GC_Agent:
+                 **self.cfg.planner,
+             )
+         elif self.cfg.planner.planner_name == "cem":
++            action_bounds = {}
++            if cfg.planner.get("enforce_action_bounds", False):
++                # CEM searches normalized, frame-packed actions; the benchmark
++                # bounds are for individual, unnormalized simulator actions.
++                raw_low = torch.tensor(cfg.env_action_low, dtype=torch.float32)
++                raw_high = torch.tensor(cfg.env_action_high, dtype=torch.float32)
++                if self.model.action_dim % len(raw_low):
++                    raise ValueError("Packed model action dimension is incompatible with simulator bounds")
++                repeats = self.model.action_dim // len(raw_low)
++                action_bounds = {
++                    "action_lower_bounds": self.preprocessor.normalize_actions(raw_low).repeat(repeats),
++                    "action_upper_bounds": self.preprocessor.normalize_actions(raw_high).repeat(repeats),
++                }
+             self.planner = CEMPlanner(
+                 unroll=self.model.unroll,
+                 action_dim=self.model.action_dim,
+                 action_masks=None,
+                 local_generator=self.local_gpu_generator,
+                 decode_unroll=self.model.decode_unroll,
++                **action_bounds,
+                 **self.cfg.planner,
+             )
+         elif self.cfg.planner.planner_name == "mppi":
+@@ -146,6 +160,7 @@ class GC_Agent:
+         self._prev_elite_losses_std = planning_result.prev_elite_losses_std
+         self._prev_pred_frames_over_iterations = planning_result.pred_frames_over_iterations
+         self._predicted_best_encs_over_iterations = planning_result.predicted_best_encs_over_iterations
++        self._planning_info = planning_result.info or {}
+         return planning_result.actions
+ 
+     def act(
+diff --git a/evals/simu_env_planning/planning/plan_evaluator.py b/evals/simu_env_planning/planning/plan_evaluator.py
+index 5156042..985d530 100644
+--- a/evals/simu_env_planning/planning/plan_evaluator.py
++++ b/evals/simu_env_planning/planning/plan_evaluator.py
+@@ -5,6 +5,7 @@
+ # LICENSE file in the root directory of this source tree.
+ #
+ 
++import csv
+ import os
+ from time import time
+ 
+@@ -16,6 +17,7 @@ from tensordict.tensordict import TensorDict
+ from tqdm.auto import tqdm
+ 
+ from evals.simu_env_planning.envs.init import make_env
++from evals.simu_env_planning.planning.candidate_logging import save_branch_a_candidates
+ from evals.simu_env_planning.planning.episode_plot_utils import (
+     analyze_distances,
+     compare_unrolled_plan_expert,
+@@ -81,9 +83,14 @@ class PlanEvaluator:
+         def actor(info, steps_left):
+             # need to convert to tensor because the env expects a tensor
+             # return torch.tensor(env_expert.action_space.sample())
+-            return torch.tensor(np.expand_dims(policy.get_action(info["state"]), axis=0))
++            action = policy.get_action(info["state"])
++            action = np.clip(action, env_expert.action_space.low, env_expert.action_space.high)
++            return torch.tensor(np.expand_dims(action, axis=0))
+ 
+-        return self.unroll_expert(env_expert, obs, info, actor)
++        try:
++            return self.unroll_expert(env_expert, obs, info, actor)
++        finally:
++            env_expert.close()
+ 
+     def unroll_expert(self, env, obs, info, actor):
+         """
+@@ -142,6 +149,7 @@ class PlanEvaluator:
+         ep_obs_proprio_td_list = [td]
+         infos_list = []
+         actions = []
++        self.execution_rows = []
+         pbar = tqdm(
+             desc="executing agent",
+             total=env.max_steps(),
+@@ -182,6 +190,18 @@ class PlanEvaluator:
+             # env.step_multiple() returns consequences of action
+             # but not initial obs, stored in ep_obs_proprio_td_list[-1]["visual"]
+             obses, rewards, dones, infos = env.step_multiple(action)
++            # A success can stop a returned action prefix partway through.
++            actions[-1] = action[:len(infos)].detach().cpu()
++            if self.cfg.task_specification.task == "mw-reach-wall":
++                for i, transition in enumerate(infos):
++                    executed_action = actions[-1][i].tolist()
++                    self.execution_rows.append({
++                        "plan_call": len(actions) - 1,
++                        "simulator_step": env.elapsed_steps() - len(infos) + i + 1,
++                        **{f"action_{d}": value for d, value in enumerate(executed_action)},
++                        "tcp_goal_distance_m": float(transition["obj_to_target"]),
++                        "success": bool(transition["success"]),
++                    })
+             reward = sum(rewards)
+             done = dones[-1]
+ 
+@@ -518,7 +538,13 @@ class PlanEvaluator:
+         self.prev_pred_frames_over_iterations = []
+         self.predicted_best_encs_over_iterations = []
+ 
++        if cfg.task_specification.get("reset_step_budget_after_warmup", False):
++            env.set_elapsed_steps(0)
++
+         def agent_actor(obs, steps_left, plan_vis_path=None):
++            monitor = getattr(self, "resource_monitor", None)
++            if monitor is not None:
++                monitor.set_context("planning", episode=ep, plan_call=len(self.prev_losses))
+             act = agent.act(
+                 prepare_obs(agent.cfg.task_specification.obs, obs),
+                 steps_left=steps_left,
+@@ -528,6 +554,21 @@ class PlanEvaluator:
+             self.prev_elite_losses_std.append(agent._prev_elite_losses_std)
+             self.prev_pred_frames_over_iterations.append(agent._prev_pred_frames_over_iterations)
+             self.predicted_best_encs_over_iterations.append(agent._predicted_best_encs_over_iterations)
++            if agent._planning_info.get("diagnostic_candidates"):
++                rows = save_branch_a_candidates(
++                    agent, env, obs, goal_obs, cfg, work_dir, ep, ep_seed,
++                    plan_call=len(self.prev_losses) - 1, executed=act,
++                )
++                for row in rows:
++                    if row["origin"] != "updated_mean":
++                        continue
++                    log.info(
++                        f"Branch A: episode={ep}, plan_call={len(self.prev_losses) - 1}, round={row['cem_round']}, "
++                        f"cost={row['a_cost']:.6f}, steps={row['simulator_steps']}, "
++                        f"returned_mean={row['is_deployed_output']}, prefix_matches={row['is_executed_prefix']}"
++                    )
++            if monitor is not None:
++                monitor.set_context("execute_actions", episode=ep, plan_call=len(self.prev_losses) - 1)
+             return act
+ 
+         episode_obses, ep_reward, planned_actions, infos, success, state_dist = self.unroll_agent(
+@@ -537,6 +578,11 @@ class PlanEvaluator:
+             agent_actor,
+             preprocessor=agent.preprocessor,
+         )
++        if self.execution_rows:
++            with (work_dir / "execution.csv").open("w", newline="", encoding="utf-8") as handle:
++                writer = csv.DictWriter(handle, fieldnames=list(self.execution_rows[0]))
++                writer.writeheader()
++                writer.writerows(self.execution_rows)
+         if "droid" in cfg.task_specification.task:
+             success_dist = 0.0
+             # first 6 action dims are summable in time and should lead to same delta whatever the path taken if no obstacles
+diff --git a/evals/simu_env_planning/planning/planning/planner.py b/evals/simu_env_planning/planning/planning/planner.py
+index c67fce7..301529e 100644
+--- a/evals/simu_env_planning/planning/planning/planner.py
++++ b/evals/simu_env_planning/planning/planning/planner.py
+@@ -227,6 +227,11 @@ class CEMPlanner(Planner):
+         num_act_stepped: int = None,
+         decode_each_iteration: bool = False,
+         decode_unroll: Callable = None,
++        capture_rounds: List[int] = None,
++        capture_samples: bool = False,
++        action_lower_bounds=None,
++        action_upper_bounds=None,
++        cost_batch_size: int = None,
+         **kwargs,
+     ):
+         super().__init__(unroll)
+@@ -247,6 +252,50 @@ class CEMPlanner(Planner):
+         self.num_act_stepped = num_act_stepped
+         self.decode_each_iteration = decode_each_iteration
+         self.decode_unroll = decode_unroll
++        if cost_batch_size is not None and (isinstance(cost_batch_size, bool) or not isinstance(cost_batch_size, int) or cost_batch_size < 1):
++            raise ValueError("cost_batch_size must be a positive integer or None")
++        self.cost_batch_size = cost_batch_size
++
++        self.action_lower_bounds = self.action_upper_bounds = None
++        if (action_lower_bounds is None) != (action_upper_bounds is None):
++            raise ValueError("Both action bound vectors must be supplied")
++        if action_lower_bounds is not None:
++            low = torch.as_tensor(action_lower_bounds, device=self.device, dtype=torch.float32)
++            high = torch.as_tensor(action_upper_bounds, device=self.device, dtype=torch.float32)
++            if low.shape != (action_dim,) or high.shape != (action_dim,):
++                raise ValueError("Action bounds must match the packed action dimension")
++            if not (torch.isfinite(low).all() and torch.isfinite(high).all() and (low < high).all()):
++                raise ValueError("Action bounds must be finite and strictly ordered")
++            self.action_lower_bounds, self.action_upper_bounds = low, high
++
++        # Optional fixed-pool A/B/C diagnostics; rounds are numbered from one.
++        self.capture_rounds = tuple(capture_rounds or ())
++        self.capture_samples = capture_samples
++        if any(r < 1 or r > self.iterations for r in self.capture_rounds):
++            raise ValueError("capture_rounds must lie between 1 and iterations")
++
++    def _bound_actions(self, actions):
++        """Project normalized packed actions into the benchmark's action box."""
++        if self.action_lower_bounds is None:
++            return actions
++        return torch.maximum(torch.minimum(actions, self.action_upper_bounds), self.action_lower_bounds)
++
++    def cost_function(self, actions, z_init):
++        """Score the full population in bounded batches, retaining its order.
++
++        Sampling and elite selection still operate on the entire population.
++        Only scalar costs survive each batch; full predicted rollouts are freed.
++        """
++        if self.cost_batch_size is None or actions.shape[1] <= self.cost_batch_size:
++            return super().cost_function(actions, z_init)
++        costs = []
++        for start in range(0, actions.shape[1], self.cost_batch_size):
++            batch = actions[:, start : start + self.cost_batch_size]
++            cost = super().cost_function(batch, z_init)
++            if cost.shape != (batch.shape[1],):
++                raise ValueError("Batched CEM scoring requires one scalar cost per candidate")
++            costs.append(cost)
++        return torch.cat(costs, dim=0)
+ 
+     @torch.no_grad()
+     def plan(
+@@ -274,6 +323,7 @@ class CEMPlanner(Planner):
+         else:
+             plan_length = min(self.horizon, steps_left)
+         mean = torch.zeros(plan_length, self.action_dim, device=self.device)
++        mean = self._bound_actions(mean)
+         std = self.var_scale * torch.ones(plan_length, self.action_dim, device=self.device)
+         actions = torch.empty(
+             plan_length,
+@@ -283,6 +333,7 @@ class CEMPlanner(Planner):
+         )
+         losses, elite_means, elite_stds = [], [], []
+         predicted_best_encs_over_iterations = []
++        diagnostic_candidates = []
+         if self.decode_each_iteration:
+             pred_frames_over_iterations = []
+         # Iterate CEM
+@@ -299,6 +350,7 @@ class CEMPlanner(Planner):
+                     for i, (dims, maxnorm) in enumerate(zip(self.max_norm_dims, self.max_norms)):
+                         # Clip the specified dimensions to [-maxnorm, maxnorm]
+                         actions[h, :, dims] = torch.clip(actions[h, :, dims], min=-maxnorm, max=maxnorm)
++            actions[:] = self._bound_actions(actions)
+             # Compute elite actions
+             cost = self.cost_function(actions, z_init).unsqueeze(1)
+             losses.append(cost.min().item())
+@@ -309,7 +361,30 @@ class CEMPlanner(Planner):
+             else:
+                 all_actions = actions
+             elite_idxs = torch.topk(-cost.squeeze(1), self.num_elites, dim=0).indices
+-            elite_loss, elite_actions = cost[elite_idxs], all_actions[:, elite_idxs]  # [EL,1] , [H,EL,A]
++            elite_loss, elite_actions = cost[elite_idxs], all_actions[:, elite_idxs]
++            if self.capture_samples and itr + 1 in self.capture_rounds:
++                saved_actions = all_actions.detach().cpu().clone()
++                saved_costs = cost.detach().cpu().flatten()
++                elite_set = set(elite_idxs.detach().cpu().tolist())
++
++                for sample_idx in range(saved_actions.shape[1]):
++                    diagnostic_candidates.append({
++                        "name": f"round_{itr + 1}_sample_{sample_idx:03d}",
++                        "cem_round": itr + 1,
++                        "origin": (
++                            "included_mean"
++                            if sample_idx == 0
++                            else "gaussian_sample"
++                        ),
++                        "sample_index": sample_idx,
++                        "is_elite": sample_idx in elite_set,
++                        "is_deployed_output": False,
++                        "actions_normalized": (
++                            saved_actions[:, sample_idx].clone()
++                        ),
++                        "a_cost": float(saved_costs[sample_idx]),
++                    })
++            # [EL,1] , [H,EL,A]
+             # Log the mean and std of the elite values
+             elite_means.append(elite_loss.mean().item())
+             elite_stds.append(elite_loss.std().item())
+@@ -318,9 +393,34 @@ class CEMPlanner(Planner):
+             new_std = torch.std(elite_actions, dim=1)
+             # Apply momentum to mean and std updates
+             mean = new_mean * (1 - self.momentum_mean) + mean * self.momentum_mean
++            mean = self._bound_actions(mean)
+             std = new_std * (1 - self.momentum_std) + std * self.momentum_std
+             # Decoding logic
+             predicted_best_encs = self.unroll(z_init, act_suffix=mean.unsqueeze(1))
++            mean_cost = self.objective(predicted_best_encs, mean.unsqueeze(1)).item()
++            if itr + 1 in self.capture_rounds:
++                diagnostic_candidates.append({
++                    "name": f"mean_round_{itr + 1}",
++                    "origin": "updated_mean",
++                    "sample_index": None,
++                    "is_elite": None,
++                    "is_deployed_output": itr + 1 == self.iterations,
++                    "cem_round": itr + 1,
++                    "actions_normalized": mean.detach().cpu().clone(),
++                    "predicted_endpoint": (
++                        predicted_best_encs[-1:].detach().cpu().clone()
++                        if isinstance(predicted_best_encs, torch.Tensor)
++                        else {
++                            key: value[-1:].detach().cpu().clone()
++                            for key, value in predicted_best_encs.items()
++                        }
++                    ),
++                    "a_cost": mean_cost,
++                })
++            logger.info(
++                f"CEM round={itr + 1}: "
++                f"sample_best={cost.min().item():.6f}, mean_cost={mean_cost:.6f}"
++            )
+             predicted_best_encs_over_iterations.append(predicted_best_encs)
+             if self.decode_each_iteration and self.decode_unroll is not None:
+                 pred_frames = self.decode_unroll(
+@@ -330,6 +430,11 @@ class CEMPlanner(Planner):
+                 # [T H W 3]: uint 8 in [0, 255]
+ 
+         self._prev_mean = mean
++        chosen_cost = self.cost_function(mean.unsqueeze(1), z_init).item()
++        logger.info(
++            f"CEM diagnostic: last_round_best={losses[-1]:.6f}, "
++            f"final_mean_cost={chosen_cost:.6f}"
++        )
+         a = mean[: self.num_act_stepped]
+         if self.distribute_planner:
+             dist.broadcast(a, src=0)
+@@ -340,6 +445,10 @@ class CEMPlanner(Planner):
+             prev_elite_losses_std=torch.tensor(elite_stds).unsqueeze(-1),
+             pred_frames_over_iterations=pred_frames_over_iterations if self.decode_each_iteration else None,
+             predicted_best_encs_over_iterations=predicted_best_encs_over_iterations,
++            info={
++                "diagnostic_candidates": diagnostic_candidates,
++                "initial_encoding": z_init.detach().cpu().clone() if self.capture_rounds else None,
++            },
+         )
+         return result
+ 
+diff --git a/evals/simu_env_planning/planning/utils.py b/evals/simu_env_planning/planning/utils.py
+index 244195f..0b01654 100644
+--- a/evals/simu_env_planning/planning/utils.py
++++ b/evals/simu_env_planning/planning/utils.py
+@@ -51,7 +51,7 @@ def make_video_mp4(images, fps, output_path, obs_concat_channels=True):
+     Input:
+         images: List[tau C H W] of length T
+     """
+-    writer = imageio.get_writer(output_path, fps=fps, codec="libx264")
++    writer = imageio.get_writer(output_path, fps=fps, codec="libx264", format="FFMPEG")
+     for img in images:
+         img = (img[-3:] if obs_concat_channels else img[-1]).numpy() if isinstance(img, torch.Tensor) else img
+         img = img.transpose(1, 2, 0)
+diff --git a/evals/utils.py b/evals/utils.py
+index 1725143..32bc54c 100644
+--- a/evals/utils.py
++++ b/evals/utils.py
+@@ -9,10 +9,12 @@ Common utilities for evaluation scripts.
+ """
+ import logging
+ import os
++from types import SimpleNamespace
+ 
+ import imageio
+ import matplotlib.pyplot as plt
+ import numpy as np
++import torch
+ 
+ from app.plan_common.datasets.preprocessor import Preprocessor
+ from app.plan_common.datasets.transforms import make_inverse_transforms, make_transforms
+@@ -63,6 +65,24 @@ def make_datasets(cfgs_data, cfgs_data_aug, world_size=1, rank=0, filter_first_e
+     )
+     logger.info(f"{inverse_transform.std=}, {inverse_transform.mean=}")
+ 
++    # Simulator/expert-goal evaluation only needs the published training stats,
++    # not trajectory samples. Use the same registry as the upstream Hub loader.
++    stats_name = cfgs_data.get("normalization_stats")
++    if stats_name:
++        from app.plan_common.datasets import get_data_stats
++
++        stats = get_data_stats(stats_name)
++        tensors = {
++            name: torch.tensor(stats[name], dtype=torch.float32)
++            for name in ("action_mean", "action_std", "state_mean", "state_std", "proprio_mean", "proprio_std")
++        }
++        dimensions = SimpleNamespace(
++            action_dim=stats["action_dim"], proprio_dim=stats["proprio_dim"],
++            normalization_stats_only=True,
++        )
++        logger.info(f"Using published {stats_name} normalization statistics; no trajectory dataset loaded")
++        return dimensions, Preprocessor(**tensors, transform=transform, inverse_transform=inverse_transform)
++
+     # Extract nested structures (matching train.py structure)
+     cfgs_validation = cfgs_data.get("validation", {})
+     cfgs_loader = cfgs_data.get("loader", {})
+diff --git a/src/utils/cluster.py b/src/utils/cluster.py
+index 3f1be4c..7182ae1 100644
+--- a/src/utils/cluster.py
++++ b/src/utils/cluster.py
+@@ -7,7 +7,10 @@
+ 
+ import os
+ 
+-import clusterscope
++if os.name == "nt":
++    clusterscope = None
++else:
++    import clusterscope
+ 
+ from src.utils.logging import get_logger
+ 
+@@ -102,7 +105,7 @@ def get_dataset_path(dataset: str, cluster=None) -> str:
+     Get the path for a specific dataset.
+     Uses 'default' cluster if environment variables are set, otherwise tries the actual cluster name.
+     """
+-    if cluster is None:
++    if cluster is None and clusterscope is not None:
+         cluster = clusterscope.cluster()
+ 
+     # Try 'default' first if JEPAWM_DSET is set
+@@ -153,7 +156,7 @@ def dataset_paths() -> dict[str, str]:
+         return DATASET_PATHS_BY_CLUSTER["default"]
+ 
+     # Fallback to cluster-specific paths
+-    cluster = clusterscope.cluster()
++    cluster = clusterscope.cluster() if clusterscope is not None else None
+     if cluster in DATASET_PATHS_BY_CLUSTER:
+         return DATASET_PATHS_BY_CLUSTER[cluster]
+ 
+diff --git a/src/utils/distributed.py b/src/utils/distributed.py
+index 3611624..75b93ad 100644
+--- a/src/utils/distributed.py
++++ b/src/utils/distributed.py
+@@ -84,7 +84,7 @@ def init_distributed(
+             logger.info(f"Initializing distributed with timeout={nccl_timeout_minutes} minutes")
+             nccl_timeout = datetime.timedelta(minutes=nccl_timeout_minutes)
+         torch.distributed.init_process_group(
+-            backend="cpu:gloo,cuda:nccl",
++            backend="gloo" if os.name == "nt" else "cpu:gloo,cuda:nccl",
+             world_size=world_size,
+             rank=rank,
+             timeout=nccl_timeout,

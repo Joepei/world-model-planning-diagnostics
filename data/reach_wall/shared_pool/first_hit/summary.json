@@ -1,0 +1,93 @@
+{
+  "completed_pools": 336,
+  "expected_pools": 336,
+  "complete": true,
+  "scopes": {
+    "full_horizon": {
+      "pools": 336,
+      "pools_with_success": 243,
+      "mean_spearman": {
+        "ab": 0.3975096463021994,
+        "ac": 0.37507397940159576,
+        "bc": 0.6142069958690486
+      },
+      "selections": {
+        "a_deployed_mean": {
+          "successes": 14,
+          "c_optimal": 1,
+          "missed_successes": 229
+        },
+        "a_pool_min": {
+          "successes": 14,
+          "c_optimal": 1,
+          "missed_successes": 229
+        },
+        "b_pool_min": {
+          "successes": 36,
+          "c_optimal": 9,
+          "missed_successes": 207
+        },
+        "c_pool_best": {
+          "successes": 243,
+          "c_optimal": 336,
+          "missed_successes": 0
+        }
+      },
+      "comparisons": {
+        "b_vs_a_deployed_mean": {
+          "better": 287,
+          "tied": 2,
+          "worse": 47
+        },
+        "b_vs_a_pool_min": {
+          "better": 283,
+          "tied": 3,
+          "worse": 50
+        }
+      }
+    },
+    "executed_prefix": {
+      "pools": 336,
+      "pools_with_success": 103,
+      "mean_spearman": {
+        "ab": 0.3975096463021994,
+        "ac": 0.20677972470000405,
+        "bc": 0.4033449057144374
+      },
+      "selections": {
+        "a_deployed_mean": {
+          "successes": 6,
+          "c_optimal": 1,
+          "missed_successes": 97
+        },
+        "a_pool_min": {
+          "successes": 6,
+          "c_optimal": 2,
+          "missed_successes": 97
+        },
+        "b_pool_min": {
+          "successes": 7,
+          "c_optimal": 3,
+          "missed_successes": 96
+        },
+        "c_pool_best": {
+          "successes": 103,
+          "c_optimal": 336,
+          "missed_successes": 0
+        }
+      },
+      "comparisons": {
+        "b_vs_a_deployed_mean": {
+          "better": 267,
+          "tied": 1,
+          "worse": 68
+        },
+        "b_vs_a_pool_min": {
+          "better": 263,
+          "tied": 1,
+          "worse": 72
+        }
+      }
+    }
+  }
+}

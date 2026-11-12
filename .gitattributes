@@ -1,0 +1,5 @@
+# Preserve the exact published byte hashes on Windows and Linux checkouts.
+* -text
+*.png binary
+*.pdf binary
+*.npz binary

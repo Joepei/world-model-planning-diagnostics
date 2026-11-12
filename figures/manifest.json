@@ -1,0 +1,9 @@
+{
+  "inputs_sha256": {
+    "data\\wall\\terminal\\selections.csv": "34b2f5f4dd68d751f3269ab217d486bb74d2af43aaad14ca99341d3e85036a23"
+  },
+  "simulator_rerun": false,
+  "encoder_rerun": false,
+  "curve_smoothing": false,
+  "curve_padding": false
+}

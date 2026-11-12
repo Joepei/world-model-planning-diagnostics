@@ -1,0 +1,304 @@
+{
+  "completed_pools": 336,
+  "scopes": {
+    "full_horizon": {
+      "pools": 336,
+      "occurrences": 1517040,
+      "unique_routes": 1512336,
+      "pools_with_first_hit_success": 243,
+      "pools_with_terminal_success": 243,
+      "first_hit_success_routes": 61011,
+      "terminal_success_routes": 58652,
+      "reached_then_left_routes": 2359,
+      "correlations": {
+        "ab": {
+          "n": 336,
+          "mean": 0.3975096463021994,
+          "median": 0.43070529551410264
+        },
+        "a_terminal": {
+          "n": 336,
+          "mean": 0.3767536142070147,
+          "median": 0.3941616329613702
+        },
+        "b_terminal": {
+          "n": 336,
+          "mean": 0.6154473329221849,
+          "median": 0.6527625563875404
+        },
+        "a_first_hit": {
+          "n": 336,
+          "mean": 0.37507397940159576,
+          "median": 0.394036310517918
+        },
+        "b_first_hit": {
+          "n": 336,
+          "mean": 0.6142069958690486,
+          "median": 0.652287968450744
+        },
+        "terminal_first_hit": {
+          "n": 336,
+          "mean": 0.997194867432435,
+          "median": 0.9999999417836722
+        }
+      },
+      "selections": {
+        "a_deployed_mean": {
+          "terminal_successes": 14,
+          "first_hit_successes": 14,
+          "terminal_optimal": 0,
+          "terminal_missed_successes": 229,
+          "terminal_distance_m": {
+            "n": 336,
+            "mean": 0.08332493000049897,
+            "median": 0.0792151558224975
+          },
+          "terminal_regret_m": {
+            "n": 336,
+            "mean": 0.04167524070871772,
+            "median": 0.03976926394063389
+          }
+        },
+        "a_pool_min": {
+          "terminal_successes": 13,
+          "first_hit_successes": 14,
+          "terminal_optimal": 0,
+          "terminal_missed_successes": 230,
+          "terminal_distance_m": {
+            "n": 336,
+            "mean": 0.08285928933616524,
+            "median": 0.0796206985556298
+          },
+          "terminal_regret_m": {
+            "n": 336,
+            "mean": 0.041209600044383995,
+            "median": 0.03930322864148947
+          }
+        },
+        "b_pool_min": {
+          "terminal_successes": 35,
+          "first_hit_successes": 36,
+          "terminal_optimal": 8,
+          "terminal_missed_successes": 208,
+          "terminal_distance_m": {
+            "n": 336,
+            "mean": 0.06641670021115174,
+            "median": 0.06235149527803491
+          },
+          "terminal_regret_m": {
+            "n": 336,
+            "mean": 0.024767010919370513,
+            "median": 0.02410506651022612
+          }
+        },
+        "c_terminal_best": {
+          "terminal_successes": 243,
+          "first_hit_successes": 243,
+          "terminal_optimal": 336,
+          "terminal_missed_successes": 0,
+          "terminal_distance_m": {
+            "n": 336,
+            "mean": 0.04164968929178124,
+            "median": 0.03577835932487304
+          },
+          "terminal_regret_m": {
+            "n": 336,
+            "mean": 0.0,
+            "median": 0.0
+          }
+        },
+        "c_first_hit_best": {
+          "terminal_successes": 190,
+          "first_hit_successes": 243,
+          "terminal_optimal": 159,
+          "terminal_missed_successes": 53,
+          "terminal_distance_m": {
+            "n": 336,
+            "mean": 0.05123613140514692,
+            "median": 0.04701468651360669
+          },
+          "terminal_regret_m": {
+            "n": 336,
+            "mean": 0.009586442113365679,
+            "median": 0.0010660662260965278
+          }
+        }
+      },
+      "terminal_comparisons": {
+        "b_vs_a_deployed_mean": {
+          "better": 287,
+          "tied": 0,
+          "worse": 49
+        },
+        "b_vs_a_pool_min": {
+          "better": 283,
+          "tied": 0,
+          "worse": 53
+        }
+      },
+      "first_hit_comparisons": {
+        "b_vs_a_deployed_mean": {
+          "better": 287,
+          "tied": 2,
+          "worse": 47
+        },
+        "b_vs_a_pool_min": {
+          "better": 283,
+          "tied": 3,
+          "worse": 50
+        }
+      }
+    },
+    "executed_prefix": {
+      "pools": 336,
+      "occurrences": 1517040,
+      "unique_routes": 1512336,
+      "pools_with_first_hit_success": 103,
+      "pools_with_terminal_success": 103,
+      "first_hit_success_routes": 19825,
+      "terminal_success_routes": 19391,
+      "reached_then_left_routes": 434,
+      "correlations": {
+        "ab": {
+          "n": 336,
+          "mean": 0.3975096463021994,
+          "median": 0.43070529551410264
+        },
+        "a_terminal": {
+          "n": 336,
+          "mean": 0.20662899492305942,
+          "median": 0.19112360545121743
+        },
+        "b_terminal": {
+          "n": 336,
+          "mean": 0.4031834490321617,
+          "median": 0.38052020907908446
+        },
+        "a_first_hit": {
+          "n": 336,
+          "mean": 0.20677972470000405,
+          "median": 0.19112362210767403
+        },
+        "b_first_hit": {
+          "n": 336,
+          "mean": 0.4033449057144374,
+          "median": 0.38052020907908446
+        },
+        "terminal_first_hit": {
+          "n": 336,
+          "mean": 0.9989099289803514,
+          "median": 1.0
+        }
+      },
+      "selections": {
+        "a_deployed_mean": {
+          "terminal_successes": 6,
+          "first_hit_successes": 6,
+          "terminal_optimal": 0,
+          "terminal_missed_successes": 97,
+          "terminal_distance_m": {
+            "n": 336,
+            "mean": 0.11194855477720815,
+            "median": 0.10522728878364677
+          },
+          "terminal_regret_m": {
+            "n": 336,
+            "mean": 0.033602500346763445,
+            "median": 0.03422056601733056
+          }
+        },
+        "a_pool_min": {
+          "terminal_successes": 6,
+          "first_hit_successes": 6,
+          "terminal_optimal": 1,
+          "terminal_missed_successes": 97,
+          "terminal_distance_m": {
+            "n": 336,
+            "mean": 0.11192874580774441,
+            "median": 0.10522728878364677
+          },
+          "terminal_regret_m": {
+            "n": 336,
+            "mean": 0.0335826913772997,
+            "median": 0.03372759015896233
+          }
+        },
+        "b_pool_min": {
+          "terminal_successes": 7,
+          "first_hit_successes": 7,
+          "terminal_optimal": 2,
+          "terminal_missed_successes": 96,
+          "terminal_distance_m": {
+            "n": 336,
+            "mean": 0.1010276680013967,
+            "median": 0.09026700316457073
+          },
+          "terminal_regret_m": {
+            "n": 336,
+            "mean": 0.022681613570951983,
+            "median": 0.021157384421604846
+          }
+        },
+        "c_terminal_best": {
+          "terminal_successes": 103,
+          "first_hit_successes": 103,
+          "terminal_optimal": 336,
+          "terminal_missed_successes": 0,
+          "terminal_distance_m": {
+            "n": 336,
+            "mean": 0.07834605443044472,
+            "median": 0.06224528487615877
+          },
+          "terminal_regret_m": {
+            "n": 336,
+            "mean": 0.0,
+            "median": 0.0
+          }
+        },
+        "c_first_hit_best": {
+          "terminal_successes": 93,
+          "first_hit_successes": 103,
+          "terminal_optimal": 286,
+          "terminal_missed_successes": 10,
+          "terminal_distance_m": {
+            "n": 336,
+            "mean": 0.07944286656524843,
+            "median": 0.06224528487615877
+          },
+          "terminal_regret_m": {
+            "n": 336,
+            "mean": 0.0010968121348037183,
+            "median": 0.0
+          }
+        }
+      },
+      "terminal_comparisons": {
+        "b_vs_a_deployed_mean": {
+          "better": 267,
+          "tied": 0,
+          "worse": 69
+        },
+        "b_vs_a_pool_min": {
+          "better": 263,
+          "tied": 0,
+          "worse": 73
+        }
+      },
+      "first_hit_comparisons": {
+        "b_vs_a_deployed_mean": {
+          "better": 267,
+          "tied": 1,
+          "worse": 68
+        },
+        "b_vs_a_pool_min": {
+          "better": 263,
+          "tied": 1,
+          "worse": 72
+        }
+      }
+    }
+  },
+  "expected_pools": 336,
+  "complete": true,
+  "episodes": 48
+}

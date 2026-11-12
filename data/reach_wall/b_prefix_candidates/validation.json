@@ -1,0 +1,39 @@
+{
+  "complete": true,
+  "pools": 47,
+  "episodes": 43,
+  "unique_full_routes_checked": 211547,
+  "native_steps_checked": 3329595,
+  "native_control_max_error_m": 0,
+  "known_old_tails_verified": 47,
+  "candidate_occurrences_checked": 212205,
+  "sample_occurrences_checked": 211500,
+  "successful_sample_prefixes": 3303,
+  "successful_occurrences_including_updated_means": 3304,
+  "successful_prefix_origin_counts": {
+    "included_mean_success": 4,
+    "gaussian_sample_success": 3299,
+    "updated_mean_success": 1
+  },
+  "successful_prefixes_ever_elite": 42,
+  "successful_final_elites": 0,
+  "minimum_cost_ties_include_successful_prefix": false,
+  "minimum_gap_best_successful_sample_minus_pool_minimum_cost": 0.00869641825556755,
+  "zero_coverage_pools": [
+    [
+      0,
+      2
+    ],
+    [
+      11,
+      1
+    ],
+    [
+      20,
+      1
+    ]
+  ],
+  "native_replay_payloads_checked_against_traces": true,
+  "round_and_aggregate_counts_recomputed": true,
+  "plot_visually_checked": true
+}
