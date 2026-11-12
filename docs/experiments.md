@@ -76,3 +76,22 @@ B produces 792 successful sampled full routes, all with successful action-30 end
 Equal proposal budget is not equal runtime. Pool best is relative to a finite observed pool, not the space of all admissible sequences. Published exploratory bootstrap intervals resample 48 episode IDs rather than adaptive candidate occurrences; they do not replace repeated search seeds.
 
 Primary data: [matched initial-state tables](../data/reach_wall/initial_search_ab/).
+
+## Study coverage and future directions
+
+The empirical study uses released JEPA-WM checkpoints for two tasks, with ten
+Wall episodes and 48 Reach-Wall starting states under one planning-seed protocol.
+Candidate sequences and CEM rounds are adaptive, and planning calls within an
+episode share trajectory history. The reported aggregate comparisons retain
+those units of observation.
+
+Euclidean terminal distance measures proximity. The Wall first-hit criterion
+additionally uses doorway-aware remaining distance for failed routes. C uses
+privileged simulator state to provide a task-based reference. Pool-best outcomes
+are defined over the captured candidates; independent controller outcomes include
+each branch's own search and subsequent state visitation.
+
+Further studies can extend this framework with repeated search seeds at fixed
+states, additional model families, controlled horizon/prefix interventions, and
+learned objective modifications. The current controls and native audits provide
+the baseline measurements for those extensions.

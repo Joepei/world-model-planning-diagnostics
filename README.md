@@ -39,17 +39,17 @@ No successful route exists in the captured pools for episodes **0, 3, and 4**.
 
 ### A matched-terminal control
 
-The original C criterion rewards first success, while B scores the final state. I therefore added continuous terminal Euclidean distance as a separate C criterion. Mean within-pool Spearman B/C agreement changes only from **0.6227 to 0.6236**. A/C-terminal agreement is **0.6549**, so B does not dominate A on every ranking measure. Mean terminal regret is **5.03** for A's deployed mean and **3.40** for minimum B, in Wall coordinate units.
+The original C criterion rewards first success, while B scores the final state. I therefore added continuous terminal Euclidean distance as a separate C criterion. Mean within-pool Spearman B/C agreement changes only from **0.6227 to 0.6236**. A/C-terminal agreement is **0.6549**. Together, ranking agreement, success coverage and regret provide complementary views of selection quality: mean terminal regret is **5.03** for A's deployed mean and **3.40** for minimum B, in Wall coordinate units.
 
 ![Wall terminal planning regret by episode](figures/wall_terminal_regret.png)
 
-*Terminal regret is the selected endpoint distance minus the smallest endpoint distance in the same recorded pool. It is conditional on available candidates, not regret against a globally optimal controller. Episodes 3 and 4 account for **98.64% of B's total terminal-distance regret**.*
+*Terminal regret is the selected endpoint distance minus the smallest endpoint distance in the same recorded pool. It measures selection quality conditional on available candidates. Episodes 3 and 4 account for **98.64% of B's total terminal-distance regret**.*
 
 ![All captured Wall routes in episodes 3 and 4, highlighting B and terminal C](figures/wall_candidate_routes.png)
 
-*Gray traces show all 641 unique candidates per panel; blue highlights minimum B cost and green highlights minimum terminal physical distance. Neither pool contains an endpoint on the goal side of the wall, and neither contains a successful route. B also fails to choose the closest available endpoint. Coverage and ranking limitations coexist; this visualization does not identify their separate causal contributions. [All ten episode pools](figures/wall_all_candidate_routes.png).*
+*Gray traces show all 641 unique candidates per panel; blue highlights minimum B cost and green highlights minimum terminal physical distance. Neither pool contains an endpoint on the goal side of the wall, and neither contains a successful route. B also fails to choose the closest available endpoint. The maps make candidate coverage and selection quality visible together. [All ten episode pools](figures/wall_all_candidate_routes.png).*
 
-The Wall pilot used the original **unclipped Gaussian actions**, despite the environment's declared action box. It is not a bounded-action search benchmark. See [protocol details](docs/experiments.md#wall).
+The Wall experiments use the original **unclipped Gaussian action sampler**; Reach-Wall uses explicitly bounded native actions. The [protocol](docs/experiments.md#wall) records the action domains and search settings for both tasks.
 
 ## 3. Reach-Wall shared pools: better evaluation, substantial remaining regret
 
@@ -64,11 +64,11 @@ For the matched full-horizon **terminal** criterion:
 | Minimum B cost | **35/336** | **2.48 cm** |
 | Minimum C-terminal distance | **243/336** | 0 cm |
 
-B's endpoint is closer than A's deployed mean in **287 pools**, farther in 49. Average within-pool rank agreement with terminal C is **0.3768 for A** and **0.6154 for B**. These are decision-local route outcomes at **A's visited states**, not B/C episode success rates. Seven decisions within an episode are related observations.
+B's endpoint is closer than A's deployed mean in **287 pools**, farther in 49. Average within-pool rank agreement with terminal C is **0.3768 for A** and **0.6154 for B**. These 336 comparisons measure decision-local route quality at **A's visited states**, with seven related planning decisions per episode. The independent controller study below measures full-episode performance.
 
-Matching the temporal criterion barely changes aggregate agreement: original first-hit A/C and B/C correlations were 0.3751 and 0.6142. The remaining gap concerns alignment of the chosen latent metric, goal, and modality weighting with physical goal distance; it does not establish that the encoder lacks task information. [Tables and selections](data/reach_wall/shared_pool/terminal/).
+Matching the temporal criterion barely changes aggregate agreement: original first-hit A/C and B/C correlations were 0.3751 and 0.6142. The endpoint-matched comparison measures how the chosen latent metric, goal, and modality weighting align with physical goal distance. [Tables and selections](data/reach_wall/shared_pool/terminal/).
 
-## 4. Independent closed-loop planning: evaluation gains do not guarantee control gains
+## 4. Independent closed-loop planning: from candidate scores to episode outcomes
 
 I then ran each planner independently from **48 paired initial states and goals**. The first sampled population is identical; subsequent CEM rounds, selected actions, and visited states can differ.
 
@@ -84,11 +84,11 @@ Here **C uses first-hit task ordering**: all successes beat failures, earlier fi
 
 ![Actual Reach-Wall goal-distance curves for all 48 episodes per controller](figures/reach_wall_distance_near_goal.png)
 
-*Each line is one actual execution. B finishes closer on average but stays outside the success region. A's endpoints are more variable across the different starts and include six successes. Curves are unsmoothed and end at the actual stopping action; successful runs are not padded to action 100. This near-goal view shows 3–12 cm. [Full distance range](figures/reach_wall_distance_all.png).*
+*Each line is one actual execution. B finishes closer on average but stays outside the success region. A's endpoints are more variable across the different starts and include six successes. Curves show unsmoothed native measurements through the actual stopping action. This near-goal view shows 3–12 cm. [Full distance range](figures/reach_wall_distance_all.png).*
 
 ![Paired Reach-Wall episode 14, showing A's late improvement and B's near-goal plateau](figures/reach_wall_episode_14.png)
 
-*Episode 14 illustrates an A-success/B-failure case, not the average episode. At action 90 both controllers shorten to a ten-action plan that can be executed in full. Their states already differ. This observation does not isolate a horizon effect or establish that A is inherently more greedy.*
+*Episode 14 illustrates an A-success/B-failure case. At action 90 both controllers shorten to a ten-action plan that can be executed in full. Their states reflect each controller's previous actions. The paired curves connect the aggregate results to the timing of progress within an individual episode.*
 
 ## 5. Inspecting the gap between a plan and its executed prefix
 
@@ -103,17 +103,25 @@ I examined the **47 successor replanning states** after B's successful continuat
 | Any successful prefix among the final ten elites | 0/47 pools |
 | Returned final mean has a successful prefix | 0/47 pools |
 
-These are **other successful prefixes**, not exact resamplings of the old remainder. In 41 pools, an option both succeeds within 15 actions and ends inside the goal after 30, while the returned mean ends outside it.
+The new pools are evaluated for **any successful executable prefix**, with the previous remainder checked separately as a feasibility reference. In 41 pools, an option both succeeds within 15 actions and ends inside the goal after 30, while the returned mean ends outside it.
 
 ![Native prefix success becomes rarer while the endpoint latent score improves across CEM rounds](figures/prefix_success_by_round.png)
 
-*In this outcome-conditioned set of states, sampled-prefix success decreases from **6.71% in round 1 to 0.05% in round 15**, while the optimized endpoint latent score improves. This diagnoses objective/search/execution interaction under this protocol, rather than an intrinsic inability of CEM to solve Reach-Wall. [Audit tables](data/reach_wall/b_prefix_candidates/).*
+*In this outcome-conditioned set of states, sampled-prefix success decreases from **6.71% in round 1 to 0.05% in round 15**, while the optimized endpoint latent score improves. The round-by-round audit tracks how optimizing the endpoint objective changes the availability and selection of executable successful prefixes. [Audit tables](data/reach_wall/b_prefix_candidates/).*
 
-A complementary comparison at the **48 matched initial states** removes later state-visitation differences: B's independently generated pool contains successful full routes in 4/48 starts versus A's 0/48. However, A has a closer pool-best route in 28 of the 44 starts where both pools fail. This supports a specific coverage advantage, not an overall search-quality ordering. [Matched-state comparison](docs/experiments.md#matched-initial-state-search).
+A complementary comparison at the **48 matched initial states** controls state visitation: B's independently generated pool contains successful full routes in 4/48 starts versus A's 0/48. A has a closer pool-best route in 28 of the 44 starts where both pools fail. Measuring both successful-route coverage and proximity reveals how the two searches distribute their strongest candidates across starting states. [Matched-state comparison](docs/experiments.md#matched-initial-state-search).
 
-## Scope
+## Research contributions
 
-This is a completed diagnostic **pilot** using released pretrained checkpoints. It does not establish a new algorithm, global search optimality, a general ranking of planners, or the cause of every failure. Limits include ten Wall episodes, 48 Reach-Wall starts, one planning-seed protocol, one model family, and task-specific settings. Multiple search seeds at the same state and comparisons across model families remain future work. Euclidean failure distance is a proximity proxy, not obstacle-aware cost-to-go. C's native-state access is privileged and is not a practical learned-controller mitigation.
+This project develops an experimental framework for studying how **prediction, latent goal scoring, candidate search, and action execution interact** in pretrained world-model planning. It connects controlled comparisons of candidate evaluation with the behavior of independently acting planners across navigation and robotic manipulation.
+
+- **Controlled evaluation:** shared-pool A/B/C comparisons over **6,410 unique Wall routes** and **1,512,336 unique Reach-Wall decision/route pairs**, with ranking, selection, and planning-regret measurements.
+- **Objective alignment:** matched-terminal controls that compare latent goal scores with physical goal distance at the same endpoint, alongside first-hit task criteria.
+- **Closed-loop behavior:** paired A/B/C controllers across **48 Reach-Wall starting states**, linking candidate scores to native episode success and executed goal-distance curves.
+- **Failure diagnosis:** simulator replay and CEM-round audits that expose the gap between successful full plans, executable prefixes, and the sequences retained during replanning.
+- **Reproducible evidence:** candidate-capture and state-restoration code, native-outcome checks, published measurements, and data-only figure regeneration.
+
+The [experimental protocol](docs/experiments.md) documents study coverage, control choices, and interpretation; the [code map](docs/code-map.md) identifies the implementation behind each experiment.
 
 ## Reproduce and inspect
 
